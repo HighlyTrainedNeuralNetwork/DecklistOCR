@@ -8,6 +8,8 @@ import json
 import Levenshtein
 import numpy as np
 from dotenv import load_dotenv
+from dbscan import MyDBSCAN
+
 load_dotenv("../.env")
 
 
@@ -113,8 +115,7 @@ for entry in parsed_entries:
     parsed_points.append([entry["boundingPoly"]["vertices"][0]["x"], entry["boundingPoly"]["vertices"][0]["y"]])
 
 X = np.array(parsed_points)
-from sklearn.cluster import DBSCAN
-clustering = DBSCAN(eps=(image.size[0] + image.size[1]) // 10, min_samples=10).fit(X)
+clustering = MyDBSCAN(eps=(image.size[0] + image.size[1]) // 10, min_samples=10).fit(X)
 print(clustering.labels_)
 for label, point in zip(clustering.labels_, parsed_points):
     if label == 0:

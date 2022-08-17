@@ -7,3 +7,4 @@ I did not want to deal with a larger library just to get DBSCAN so I am using ht
 ## TODO
 - This logic seems to be overfitted on my MTGO training images and tanks on Arena ones. That needs to be fixed.
 - I'm making a frontend for this. To that end lambdaImplementation.py needs to not be blank.
+- Cut out numpy dependency and investigate cutting out others.
