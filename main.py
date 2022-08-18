@@ -120,15 +120,6 @@ class decklistOCR:
     def semanticDistanceValue(self, candidate, match):
         return Levenshtein.ratio(candidate, match)
 
-    def sideboardCheck(self, point):
-        if self.cardinality == "vertical":
-            if point[1] <= self.sideboard_cluster_center[1] + 50:
-                return True
-        else:
-            if point[0] >= self.sideboard_cluster_center[0] - 50:
-                return True
-        return False
-
     def processEntries(self):
         if any("Sideboard" in entry["description"] for entry in self.entries):
             match = [entry for entry in self.entries if "Sideboard" in entry["description"]][0]
@@ -151,41 +142,27 @@ class decklistOCR:
                     ys = [y for x, y in self.entryCountDict[entry["description"]]]
                     if max(ys) - min(ys) > 120:
                         self.entryCountDict[entry["description"]].pop(ys.index(max(ys)))
-                self.draw_box(entry["boundingPoly"]["vertices"], "red")
-            else:
-                self.draw_box(entry["boundingPoly"]["vertices"], "blue")
 
     def clustering(self):
-        if self.sideboard_cluster_center == 0:
-            self.coordinates = [coord for card in self.entryCountDict for coord in self.entryCountDict[card]]
-            print(self.coordinates)
-            x = np.array(self.coordinates)
-            print((self.drawOn.size[0] + self.drawOn.size[1]) // 10)
-            clustering = MyDBSCAN(eps=(self.drawOn.size[0] + self.drawOn.size[1]) // 10, min_samples=10).fit(x)
-            cluster_2 = []
-            for label, point in zip(clustering.labels_, self.coordinates):
-                if label != 0:
-                    cluster_2.append(point)
-            self.sideboard_cluster_center = np.mean(cluster_2, axis=0)
-        points_above = [point for point in self.coordinates if point[1] <= self.sideboard_cluster_center[1]]
-        points_right = [point for point in self.coordinates if point[0] >= self.sideboard_cluster_center[0]]
-        if len(points_above) < len(points_right):
-            self.cardinality = "vertical"
-        else:
-            self.cardinality = "horizontal"
+        self.coordinates = [coord for card in self.entryCountDict for coord in self.entryCountDict[card]]
+        x = np.array(self.coordinates)
+        self.drawOn = Image.open(io.BytesIO(self.image))
+        # in theory eps might need to be dynamic. it was previously self.drawOn.size[0] + self.drawOn.size[1]) // 10
+        clustering = MyDBSCAN(x, eps=236, MinPts=10)
+        i = 0
         for card in self.entryCountDict.keys():
             for single in self.entryCountDict[card]:
-                isSideboard = self.sideboardCheck(single)
-                if isSideboard:
-                    if card not in self.sideboardEntryCountDict.keys():
-                        self.sideboardEntryCountDict[card] = 1
-                    else:
-                        self.sideboardEntryCountDict[card] += 1
-                else:
+                if clustering[i] == 1:
                     if card not in self.maindeckEntryCountDict.keys():
                         self.maindeckEntryCountDict[card] = 1
                     else:
                         self.maindeckEntryCountDict[card] += 1
+                else:
+                    if card not in self.sideboardEntryCountDict.keys():
+                        self.sideboardEntryCountDict[card] = 1
+                    else:
+                        self.sideboardEntryCountDict[card] += 1
+                i += 1
 
     def export(self):
         output = ""
@@ -197,7 +174,7 @@ class decklistOCR:
         return output
 
 load_dotenv('.env')
-image_used = "Arena Jeskai.png"
+image_used = "Phoenix Decklist.png"
 credential_path = os.getenv('credential_path')
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credential_path
 start = time.time()
@@ -212,5 +189,6 @@ decklist.processEntries()
 count = sum(len(decklist.entryCountDict[key]) for key in decklist.entryCountDict)
 decklist.clustering()
 output = decklist.export()
+decklist.exportDrawing()
 print("Execution took: " + str(time.time() - start) + " seconds.\n" + "Found " + str(count) + " cards.")
 print(output)

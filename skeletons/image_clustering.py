@@ -16,7 +16,7 @@ load_dotenv("../.env")
 credential_path = os.getenv('credential_path')
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credential_path
 
-with io.open('../assets/Phoenix Decklist.png', 'rb') as image_file:
+with io.open('../assets/Grixis Phoenix Decklist.png', 'rb') as image_file:
     content = image_file.read()
 image = vision.Image(content=content)
 
@@ -93,7 +93,7 @@ with open("../assets/AtomicCards.json", encoding="UTF-8") as file:
     data = file.read()
 atomiccards = json.loads(data)["data"]
 referenceCards = atomiccards.keys()
-image = Image.open("../assets/Phoenix Decklist.png")
+image = Image.open("../assets/Grixis Phoenix Decklist.png")
 print("image size:", image.size)
 parsed_entries = []
 start = time.time()
@@ -115,14 +115,14 @@ for entry in parsed_entries:
     parsed_points.append([entry["boundingPoly"]["vertices"][0]["x"], entry["boundingPoly"]["vertices"][0]["y"]])
 
 X = np.array(parsed_points)
-clustering = MyDBSCAN(eps=(image.size[0] + image.size[1]) // 10, min_samples=10).fit(X)
-print(clustering.labels_)
-for label, point in zip(clustering.labels_, parsed_points):
-    if label == 0:
+clustering = MyDBSCAN(X, eps=(image.size[0] + image.size[1]) // 10, MinPts=10)
+print(clustering)
+for label, point in zip(clustering, parsed_points):
+    if label == 1:
         draw_point(image, {"x": point[0], "y": point[1]}, "green", 15)
     else:
         draw_point(image, {"x": point[0], "y": point[1]}, "red", 15)
 print(count)
 print(time.time() - start)
-fileout = "assets/liveModded.png"
+fileout = "../assets/liveModded.png"
 image.save(fileout)
