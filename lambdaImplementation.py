@@ -1,3 +1,10 @@
+# TODO output needs to include:
+# "headers": {
+#             "Content-Type": "application/json",
+#             "Access-Control-Allow-Origin": "*"
+#         }
+# as well as a status code and the actual output in a body parameter
+
 from dotenv import load_dotenv
 import time
 from google.cloud import vision
