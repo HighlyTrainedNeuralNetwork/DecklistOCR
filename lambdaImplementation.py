@@ -1,10 +1,3 @@
-# TODO output needs to include:
-# "headers": {
-#             "Content-Type": "application/json",
-#             "Access-Control-Allow-Origin": "*"
-#         }
-# as well as a status code and the actual output in a body parameter
-
 from dotenv import load_dotenv
 import time
 from google.cloud import vision
@@ -158,14 +151,22 @@ def lambda_handler(event, context):
         decklist.clustering()
         output = decklist.export()
         count = sum(len(decklist.entryCountDict[key]) for key in decklist.entryCountDict)
-        print("Execution took: " + str(time.time() - start) + " seconds.\n" + "Found " + str(count) + " cards.")
-        output = "Execution took: " + str(time.time() - start) + " seconds.\n" + "Found " + str(count) + " cards.\n" + output
-        return output
+        output = str(time.time() - start) + "\n" + str(count) + "\n" + output
+        return create_response(200, output)
     except Exception as e:
-        return {
-            'statusCode': 500,
-            'body': str(e)
-        }
+        return create_response(500, "Error: " + str(e))
+
+def create_response(status_code, body=None):
+    response = {
+        "statusCode": status_code,
+        "headers": {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*"
+        },
+    }
+    if body:
+        response["body"] = json.dumps(body)
+    return response
 
 object = {
   'body': "",
@@ -174,4 +175,3 @@ object = {
 with open('assets/Grixis Phoenix Decklist.png', 'rb') as image_file:
     base64_string = base64.b64encode(image_file.read())
     object["body"] = base64_string
-print(lambda_handler(object, object))
