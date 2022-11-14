@@ -96,8 +96,13 @@ class decklistOCR:
             entry["description"] = ''.join([char for char in entry["description"] if not char.isdigit()]).strip()
             if any(self.sematicDistanceBinary(entry["description"], card) for card in self.referenceCards) and \
                     len(entry["description"]) > 1:
-                entry["description"] = \
-                [card for card in self.referenceCards if self.sematicDistanceBinary(entry["description"], card)][0]
+                candidates = [card for card in self.referenceCards if
+                              self.sematicDistanceBinary(entry["description"], card)]
+                if len(candidates) == 1:
+                    entry["description"] = candidates[0]
+                else:
+                    entry["description"] = max(candidates,
+                                               key=lambda x: self.semanticDistanceValue(entry["description"], x))
                 if entry["description"] not in self.entryCountDict.keys():
                     self.entryCountDict[entry["description"]] = [
                         [entry["boundingPoly"]["vertices"][0]["x"], entry["boundingPoly"]["vertices"][0]["y"]]]
