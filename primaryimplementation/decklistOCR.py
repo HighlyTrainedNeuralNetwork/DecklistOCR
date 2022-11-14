@@ -1,3 +1,4 @@
+import datetime
 from google.cloud import vision
 import io
 from PIL import Image, ImageDraw
@@ -24,6 +25,7 @@ class decklistOCR:
         if self.drawOn == 0:
             self.drawOn = Image.open(io.BytesIO(self.image))
         draw = ImageDraw.Draw(self.drawOn)
+        # self.drawOn.show()
         draw.ellipse((vertice["x"], vertice["y"], vertice["x"] + radius, vertice["y"] + radius), fill=color, outline=color)
         return self.drawOn
 
@@ -49,7 +51,8 @@ class decklistOCR:
         return self.drawOn
 
     def exportDrawing(self):
-        self.drawOn.save("../assets/drawing.png")
+        currentTime = datetime.datetime.now().strftime("%m%d%H%M")
+        self.drawOn.save("../assets/drawings/" + currentTime + ".png")
 
     def getReferenceCards(self):
         with open("../assets/AtomicCards.json", encoding="UTF-8") as file:
@@ -125,16 +128,33 @@ class decklistOCR:
             entry["description"] = entry["description"].replace("(", "").replace(")", "").replace("[", "") \
                 .replace("]", "").replace(",", "")
             entry["description"] = ''.join([char for char in entry["description"] if not char.isdigit()]).strip()
-            if any(self.sematicDistanceBinary(entry["description"], card) for card in self.referenceCards) and \
+            consideredCandidatePool = [candidate for candidate in self.referenceCards if len(entry["description"]) - 5 <= len(candidate) <= len(entry["description"]) + 5]
+            # totalcandidatepool = len(self.referenceCards)
+            # filteredcandidatepool = [card for card in self.referenceCards if len(entry["description"]) - 3 <= len(card) <= len(entry["description"]) + 3]
+            # print("Candidate pool shrunk from {} to {}.".format(totalcandidatepool, len(filteredcandidatepool)))
+            if any(self.sematicDistanceBinary(entry["description"], card) for card in consideredCandidatePool) and \
                     len(entry["description"]) > 1:
-                entry["description"] = \
-                [card for card in self.referenceCards if self.sematicDistanceBinary(entry["description"], card)][0]
+                old = entry["description"]
+                candidates = [card for card in consideredCandidatePool if self.sematicDistanceBinary(entry["description"], card)]
+                if len(candidates) == 1:
+                    entry["description"] = candidates[0]
+                else:
+                    entry["description"] = max(candidates, key=lambda x: self.semanticDistanceValue(entry["description"], x))
+                    for candidate in candidates:
+                        check = self.semanticDistanceValue(entry["description"], candidate)
+                        print("{}: {}".format(candidate, check))
+                    # entry["description"] = candidates[0]
+                # entry["description"] = \
+                # [card for card in consideredCandidatePool if self.sematicDistanceBinary(entry["description"], card)][0]
+                print("Mapped {} to {}. Other possible matches: {}".format(old, entry["description"], candidates))
                 if entry["description"] not in self.entryCountDict.keys():
                     self.entryCountDict[entry["description"]] = [
                         [entry["boundingPoly"]["vertices"][0]["x"], entry["boundingPoly"]["vertices"][0]["y"]]]
+                    self.draw_point({"x": entry["boundingPoly"]["vertices"][0]["x"], "y": entry["boundingPoly"]["vertices"][0]["y"]}, "red", 20)
                 else:
                     self.entryCountDict[entry["description"]].append(
                         [entry["boundingPoly"]["vertices"][0]["x"], entry["boundingPoly"]["vertices"][0]["y"]])
+                    self.draw_point({"x": entry["boundingPoly"]["vertices"][0]["x"], "y": entry["boundingPoly"]["vertices"][0]["y"]}, "red", 20)
                     ys = [y for x, y in self.entryCountDict[entry["description"]]]
                     if max(ys) - min(ys) > 120:
                         self.entryCountDict[entry["description"]].pop(ys.index(max(ys)))
@@ -142,7 +162,7 @@ class decklistOCR:
     def clustering(self):
         self.coordinates = [coord for card in self.entryCountDict for coord in self.entryCountDict[card]]
         x = np.array(self.coordinates)
-        self.drawOn = Image.open(io.BytesIO(self.image))
+        # self.drawOn = Image.open(io.BytesIO(self.image))
         # in theory eps might need to be dynamic. it was previously self.drawOn.size[0] + self.drawOn.size[1]) // 10
         clustering = MyDBSCAN(x, eps=236, MinPts=10)
         i = 0
