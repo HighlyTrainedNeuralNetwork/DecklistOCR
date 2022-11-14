@@ -27,5 +27,3 @@ def calculateDictDifference(dict1, dict2):
     for key in andKeys:
         difference += abs(dict1[key] - dict2[key])
     return difference
-
-print(processTextFile("Phoenix Decklist.txt"))

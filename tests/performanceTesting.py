@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import time
 import os
 import io
+from processTextFile import processTextFile, calculateDictDifference
 
 load_dotenv('../.env')
 image_used = "Phoenix Decklist.png"
@@ -20,5 +21,9 @@ decklist.joinEntries()
 decklist.processEntries()
 count = sum(len(decklist.entryCountDict[key]) for key in decklist.entryCountDict)
 decklist.clustering()
-print(decklist.maindeckEntryCountDict)
-print(decklist.sideboardEntryCountDict)
+
+validationMaindeck, validationSideboard = processTextFile(image_used.split(".")[0] + ".txt")
+maindeckDifference = calculateDictDifference(decklist.maindeckEntryCountDict, validationMaindeck)
+sideboardDifference = calculateDictDifference(decklist.sideboardEntryCountDict, validationSideboard)
+print("Off by " + str(maindeckDifference) + " cards in maindeck.")
+print("Off by " + str(sideboardDifference) + " cards in sideboard.")
